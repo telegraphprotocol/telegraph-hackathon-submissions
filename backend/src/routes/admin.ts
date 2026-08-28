@@ -2,7 +2,7 @@ import { Router } from "express";
 import { ObjectId } from "mongodb";
 import { adminAuth } from "../middleware/adminAuth.js";
 import { submissionsCollection, type Track } from "../models/submission.js";
-import { computeIntentScores, getAddressBundle, getLeaderboard } from "../lib/validatorClient.js";
+import { computeIntentScores, getAddressBundle, getLeaderboard, getWasmScore } from "../lib/validatorClient.js";
 import { recordMatchesId } from "../types/validator.js";
 
 export const adminRouter = Router();
@@ -36,6 +36,25 @@ adminRouter.post("/miner-scores", async (req, res, next) => {
     }
 
     res.json({ scores });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post("/wasm-scores", async (req, res, next) => {
+  try {
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.json({ scores: {} });
+      return;
+    }
+
+    const uniqueIds = [...new Set(ids)];
+    const entries = await Promise.all(
+      uniqueIds.map(async (id) => [id, await getWasmScore(id).catch(() => null)] as const)
+    );
+
+    res.json({ scores: Object.fromEntries(entries) });
   } catch (err) {
     next(err);
   }

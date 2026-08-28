@@ -1,4 +1,4 @@
-import type { ChallengeResponse, Deadlines, IntentScore, Submission, SubmissionResponse, Track } from "./types";
+import type { ChallengeResponse, Deadlines, IntentScore, Submission, SubmissionResponse, Track, WasmScore } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -145,6 +145,21 @@ export const apiClient = {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-password": params.password },
       body: JSON.stringify({ items: params.items }),
+    });
+    if (!res.ok) throw new ApiError(await describeFailedResponse(res), res.status);
+    const data = await res.json();
+    return data.scores;
+  },
+
+  async adminGetWasmScores(params: {
+    ids: string[];
+    password: string;
+  }): Promise<Record<string, WasmScore | null>> {
+    if (params.ids.length === 0) return {};
+    const res = await fetch(`${API_BASE_URL}/api/admin/wasm-scores`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": params.password },
+      body: JSON.stringify({ ids: params.ids }),
     });
     if (!res.ok) throw new ApiError(await describeFailedResponse(res), res.status);
     const data = await res.json();

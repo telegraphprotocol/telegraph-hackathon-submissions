@@ -1,6 +1,7 @@
 node_modules
 dist
 .env
+*.tsbuildinfo
 uploads/**/*
 !uploads/miner-yaml/.gitkeep
 !uploads/wasm/.gitkeep

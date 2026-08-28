@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiClient, ApiError } from "../lib/apiClient";
 import { Dropdown } from "./Dropdown";
-import type { IntentScore, Submission, Track } from "../lib/types";
+import type { IntentScore, Submission, Track, WasmScore } from "../lib/types";
 
 const STORAGE_KEY = "telegraph-admin-password";
 
@@ -35,6 +35,7 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
   const [search, setSearch] = useState("");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [minerScores, setMinerScores] = useState<Record<string, IntentScore[]>>({});
+  const [wasmScores, setWasmScores] = useState<Record<string, WasmScore | null>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -88,6 +89,28 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
     };
   }, [submissions, password]);
 
+  useEffect(() => {
+    const ids = submissions
+      .filter((s) => s.track === "wasm")
+      .flatMap((s) => s.items.filter((item) => item.verified).map((item) => item.id));
+    if (ids.length === 0) {
+      setWasmScores({});
+      return;
+    }
+    let cancelled = false;
+    apiClient
+      .adminGetWasmScores({ ids, password })
+      .then((data) => {
+        if (!cancelled) setWasmScores(data);
+      })
+      .catch(() => {
+        // Non-critical — leave scores empty if this fails.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [submissions, password]);
+
   const allRows: Row[] = submissions.flatMap((s) =>
     s.items.map((item, index) => ({
       submissionId: s._id,
@@ -107,6 +130,11 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
   function scoresFor(row: Row): IntentScore[] | undefined {
     if (row.track !== "miner" || !row.verified) return undefined;
     return minerScores[`${row.walletAddress.toLowerCase()}:${row.itemId}`];
+  }
+
+  function wasmScoreFor(row: Row): WasmScore | null | undefined {
+    if (row.track !== "wasm" || !row.verified) return undefined;
+    return wasmScores[row.itemId];
   }
 
   function bestScoreValue(row: Row): number | null {
@@ -298,6 +326,8 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
                   </td>
                   {row.track === "miner" && row.verified ? (
                     <IntentScoreCells scores={scoresFor(row)} onlyIntent={intentFilter === "all" ? undefined : intentFilter} />
+                  ) : row.track === "wasm" && row.verified ? (
+                    <WasmScoreCells wasmScore={wasmScoreFor(row)} />
                   ) : (
                     <>
                       <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">—</td>
@@ -329,6 +359,42 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+function WasmScoreCells({ wasmScore }: { wasmScore: WasmScore | null | undefined }) {
+  if (wasmScore === undefined) {
+    return (
+      <>
+        <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">Loading…</td>
+        <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">—</td>
+      </>
+    );
+  }
+  if (!wasmScore) {
+    return (
+      <>
+        <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">—</td>
+        <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">Not found</td>
+      </>
+    );
+  }
+  const isRejected = wasmScore.activationStatus === "rejected";
+  return (
+    <>
+      <td className="whitespace-nowrap px-3 py-2 text-xs uppercase tracking-widest text-[var(--muted-foreground)]">
+        {wasmScore.intent ?? "—"}
+      </td>
+      <td className="px-3 py-2 font-mono text-xs text-[var(--foreground)]">
+        {isRejected ? (
+          <span className="text-[var(--danger)]" title={wasmScore.rejectionReason ?? undefined}>
+            Rejected
+          </span>
+        ) : (
+          (wasmScore.score?.toFixed(4) ?? "No score yet")
+        )}
+      </td>
+    </>
   );
 }
 

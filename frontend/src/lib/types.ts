@@ -19,6 +19,13 @@ export interface IntentScore {
   normalizedScore: number;
 }
 
+export interface WasmScore {
+  intent: string | null;
+  activationStatus: string | null;
+  score: number | null;
+  rejectionReason: string | null;
+}
+
 export interface Submission {
   _id: string;
   track: Track;

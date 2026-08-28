@@ -34,6 +34,35 @@ export async function getMinerStatus(id: string): Promise<unknown> {
   return res.json();
 }
 
+export interface WasmScore {
+  intent: string | null;
+  activationStatus: string | null;
+  score: number | null;
+  rejectionReason: string | null;
+}
+
+export async function getWasmScore(registrationId: string): Promise<WasmScore | null> {
+  const url = `${env.validatorBaseUrl}/api/wasm/${encodeURIComponent(registrationId)}`;
+  const res = await fetch(url);
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new ValidatorApiError(`Validator WASM lookup failed (${res.status})`, res.status);
+  }
+  const data = (await res.json()) as {
+    intent_id?: string;
+    activation_status?: string;
+    eval_score?: number | null;
+    rejection_reason?: string | null;
+  };
+  const activationStatus = data.activation_status ?? null;
+  return {
+    intent: data.intent_id ?? null,
+    activationStatus,
+    score: activationStatus === "rejected" ? null : (data.eval_score ?? null),
+    rejectionReason: data.rejection_reason ?? null,
+  };
+}
+
 interface LeaderboardEntry {
   miner_slug: string;
   score: number;
@@ -112,19 +141,33 @@ export async function verifyOwnership(
   for (const id of ids) {
     const matchedRecord = records.find((record) => recordMatchesId(record, id));
     const slug = matchedRecord ? String((matchedRecord as { Slug?: string }).Slug ?? "") || null : null;
-    result.set(
-      id,
-      matchedRecord
-        ? { verified: true, reason: null, slug }
-        : {
-            verified: false,
-            reason:
-              records.length === 0
-                ? `This wallet has no registered ${noun}s`
-                : `No ${noun} with id "${id}" is registered to this wallet`,
-            slug: null,
-          }
-    );
+
+    if (!matchedRecord) {
+      result.set(id, {
+        verified: false,
+        reason:
+          records.length === 0
+            ? `This wallet has no registered ${noun}s`
+            : `No ${noun} with id "${id}" is registered to this wallet`,
+        slug: null,
+      });
+      continue;
+    }
+
+    if (track === "wasm") {
+      const activationStatus = (matchedRecord as { ActivationStatus?: string }).ActivationStatus;
+      if (activationStatus === "rejected") {
+        const rejectionReason = (matchedRecord as { RejectionReason?: string | null }).RejectionReason;
+        result.set(id, {
+          verified: false,
+          reason: rejectionReason ? `WASM registration was rejected: ${rejectionReason}` : "WASM registration was rejected",
+          slug,
+        });
+        continue;
+      }
+    }
+
+    result.set(id, { verified: true, reason: null, slug });
   }
   return result;
 }
