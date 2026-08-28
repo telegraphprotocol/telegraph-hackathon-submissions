@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { apiClient, ApiError } from "../lib/apiClient";
 import { Dropdown } from "./Dropdown";
+import { PromptModal } from "./PromptModal";
+import { useToast } from "./Toast";
 import type { IntentScore, Submission, Track, WasmScore } from "../lib/types";
 
 const STORAGE_KEY = "telegraph-admin-password";
@@ -40,6 +42,8 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
   const [wasmScores, setWasmScores] = useState<Record<string, WasmScore | null>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [disqualifyTarget, setDisqualifyTarget] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -187,19 +191,47 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
   const activeRows = rows.filter((r) => !r.disqualified);
   const disqualifiedRows = rows.filter((r) => r.disqualified);
 
-  async function disqualify(submissionId: string) {
-    const reason = window.prompt("Reason for disqualifying this entry (optional):") ?? undefined;
-    await apiClient.adminDisqualifySubmission({ submissionId, password, reason });
-    setSubmissions((prev) =>
-      prev.map((s) => (s._id === submissionId ? { ...s, disqualified: true, disqualifiedReason: reason ?? null } : s))
-    );
+  async function confirmDisqualify(reason: string) {
+    const submissionId = disqualifyTarget;
+    setDisqualifyTarget(null);
+    if (!submissionId) return;
+    try {
+      const trimmedReason = reason.trim() || undefined;
+      await apiClient.adminDisqualifySubmission({ submissionId, password, reason: trimmedReason });
+      setSubmissions((prev) =>
+        prev.map((s) =>
+          s._id === submissionId ? { ...s, disqualified: true, disqualifiedReason: trimmedReason ?? null } : s
+        )
+      );
+      showToast("Entry disqualified.", "success");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to disqualify entry.", "error");
+    }
   }
 
   async function requalify(submissionId: string) {
-    await apiClient.adminRequalifySubmission({ submissionId, password });
-    setSubmissions((prev) =>
-      prev.map((s) => (s._id === submissionId ? { ...s, disqualified: false, disqualifiedReason: null } : s))
-    );
+    try {
+      await apiClient.adminRequalifySubmission({ submissionId, password });
+      setSubmissions((prev) =>
+        prev.map((s) => (s._id === submissionId ? { ...s, disqualified: false, disqualifiedReason: null } : s))
+      );
+      showToast("Entry requalified.", "success");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to requalify entry.", "error");
+    }
+  }
+
+  async function downloadFile(row: Row) {
+    try {
+      await apiClient.adminDownloadFile({
+        submissionId: row.submissionId,
+        itemIndex: row.itemIndex,
+        password,
+        fileName: row.originalFileName,
+      });
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to download file.", "error");
+    }
   }
 
   return (
@@ -302,14 +334,14 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
       {!loading && !error && activeRows.length > 0 && (
         <SubmissionsTable
           rows={activeRows}
-          password={password}
           intentFilter={intentFilter}
           sortDir={sortDir}
           setSortDir={setSortDir}
           scoresFor={scoresFor}
           wasmScoreFor={wasmScoreFor}
           actionLabel="Disqualify"
-          onAction={disqualify}
+          onAction={setDisqualifyTarget}
+          onDownload={downloadFile}
         />
       )}
 
@@ -323,16 +355,27 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
           </div>
           <SubmissionsTable
             rows={disqualifiedRows}
-            password={password}
-            intentFilter={intentFilter}
+              intentFilter={intentFilter}
             sortDir={sortDir}
             setSortDir={setSortDir}
             scoresFor={scoresFor}
             wasmScoreFor={wasmScoreFor}
             actionLabel="Requalify"
             onAction={requalify}
+            onDownload={downloadFile}
           />
         </div>
+      )}
+
+      {disqualifyTarget && (
+        <PromptModal
+          title="Disqualify entry"
+          description="Optionally give a reason — visible to admins on the Requalify button's tooltip."
+          placeholder="Reason (optional)"
+          confirmLabel="Disqualify"
+          onConfirm={confirmDisqualify}
+          onCancel={() => setDisqualifyTarget(null)}
+        />
       )}
     </div>
   );
@@ -340,7 +383,6 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
 
 function SubmissionsTable({
   rows,
-  password,
   intentFilter,
   sortDir,
   setSortDir,
@@ -348,9 +390,9 @@ function SubmissionsTable({
   wasmScoreFor,
   actionLabel,
   onAction,
+  onDownload,
 }: {
   rows: Row[];
-  password: string;
   intentFilter: string;
   sortDir: SortDir;
   setSortDir: (fn: (prev: SortDir) => SortDir) => void;
@@ -358,6 +400,7 @@ function SubmissionsTable({
   wasmScoreFor: (row: Row) => WasmScore | null | undefined;
   actionLabel: "Disqualify" | "Requalify";
   onAction: (submissionId: string) => void;
+  onDownload: (row: Row) => void;
 }) {
   return (
     <div className="overflow-x-auto border border-[var(--border)]">
@@ -421,14 +464,7 @@ function SubmissionsTable({
               <td className="whitespace-nowrap px-3 py-2">
                 <button
                   className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                  onClick={() =>
-                    apiClient.adminDownloadFile({
-                      submissionId: row.submissionId,
-                      itemIndex: row.itemIndex,
-                      password,
-                      fileName: row.originalFileName,
-                    })
-                  }
+                  onClick={() => onDownload(row)}
                 >
                   Download
                 </button>
