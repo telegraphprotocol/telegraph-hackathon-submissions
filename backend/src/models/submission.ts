@@ -24,6 +24,8 @@ export interface Submission {
   status: SubmissionStatus;
   twitterUsername: string;
   tweetMentionCount: number | null;
+  disqualified: boolean;
+  disqualifiedReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

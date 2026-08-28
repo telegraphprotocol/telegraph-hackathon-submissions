@@ -213,6 +213,8 @@ export function createSubmitRouter(track: Track): Router {
         status,
         twitterUsername,
         tweetMentionCount,
+        disqualified: false,
+        disqualifiedReason: null,
         createdAt: now,
         updatedAt: now,
       };

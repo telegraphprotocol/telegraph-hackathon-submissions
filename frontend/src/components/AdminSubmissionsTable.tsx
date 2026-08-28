@@ -23,6 +23,8 @@ interface Row {
   originalFileName: string;
   twitterUsername: string;
   tweetMentionCount: number | null;
+  disqualified: boolean;
+  disqualifiedReason: string | null;
 }
 
 type SortDir = "asc" | "desc" | null;
@@ -124,6 +126,8 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
       originalFileName: item.originalFileName,
       twitterUsername: s.twitterUsername,
       tweetMentionCount: s.tweetMentionCount,
+      disqualified: s.disqualified,
+      disqualifiedReason: s.disqualifiedReason,
     }))
   );
 
@@ -178,6 +182,24 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
       if (bv === null) return -1;
       return sortDir === "asc" ? av - bv : bv - av;
     });
+  }
+
+  const activeRows = rows.filter((r) => !r.disqualified);
+  const disqualifiedRows = rows.filter((r) => r.disqualified);
+
+  async function disqualify(submissionId: string) {
+    const reason = window.prompt("Reason for disqualifying this entry (optional):") ?? undefined;
+    await apiClient.adminDisqualifySubmission({ submissionId, password, reason });
+    setSubmissions((prev) =>
+      prev.map((s) => (s._id === submissionId ? { ...s, disqualified: true, disqualifiedReason: reason ?? null } : s))
+    );
+  }
+
+  async function requalify(submissionId: string) {
+    await apiClient.adminRequalifySubmission({ submissionId, password });
+    setSubmissions((prev) =>
+      prev.map((s) => (s._id === submissionId ? { ...s, disqualified: false, disqualifiedReason: null } : s))
+    );
   }
 
   return (
@@ -277,87 +299,158 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
         </div>
       )}
 
-      {!loading && !error && rows.length > 0 && (
-        <div className="overflow-x-auto border border-[var(--border)]">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)] bg-[var(--popover)] text-left text-xs uppercase tracking-widest text-[var(--muted-foreground)]">
-                <th className="px-3 py-2 font-medium">Track</th>
-                <th className="px-3 py-2 font-medium">Wallet</th>
-                <th className="px-3 py-2 font-medium">Item ID</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">X Account</th>
-                <th className="px-3 py-2 font-medium">X Mentions</th>
-                <th className="px-3 py-2 font-medium">Intent</th>
-                <th className="px-3 py-2 font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setSortDir((prev) => (prev === "desc" ? "asc" : prev === "asc" ? null : "desc"))}
-                    className="flex items-center gap-1 uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                  >
-                    Score {sortDir === "desc" ? "↓" : sortDir === "asc" ? "↑" : ""}
-                  </button>
-                </th>
-                <th className="px-3 py-2 font-medium">Submitted</th>
-                <th className="px-3 py-2 font-medium">File</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={`${row.submissionId}-${row.itemId}`}
-                  className="border-b border-[var(--border)] align-top last:border-b-0 hover:bg-[var(--card)]"
-                >
-                  <td className="whitespace-nowrap px-3 py-2 text-xs uppercase tracking-widest text-[var(--muted-foreground)]">
-                    {row.track}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
-                    {row.walletAddress.slice(0, 6)}…{row.walletAddress.slice(-4)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono">{row.itemId}</td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    <span className={row.verified ? "text-[var(--success)]" : "text-[var(--danger)]"}>
-                      {row.verified ? "✓ verified" : "✗ not verified"}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">@{row.twitterUsername}</td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
-                    {row.tweetMentionCount ?? "—"}
-                  </td>
-                  {row.track === "miner" && row.verified ? (
-                    <IntentScoreCells scores={scoresFor(row)} onlyIntent={intentFilter === "all" ? undefined : intentFilter} />
-                  ) : row.track === "wasm" && row.verified ? (
-                    <WasmScoreCells wasmScore={wasmScoreFor(row)} />
-                  ) : (
-                    <>
-                      <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">—</td>
-                      <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">—</td>
-                    </>
-                  )}
-                  <td className="whitespace-nowrap px-3 py-2 text-xs text-[var(--muted-foreground)]">
-                    {new Date(row.createdAt).toLocaleString()}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    <button
-                      className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                      onClick={() =>
-                        apiClient.adminDownloadFile({
-                          submissionId: row.submissionId,
-                          itemIndex: row.itemIndex,
-                          password,
-                          fileName: row.originalFileName,
-                        })
-                      }
-                    >
-                      Download
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {!loading && !error && activeRows.length > 0 && (
+        <SubmissionsTable
+          rows={activeRows}
+          password={password}
+          intentFilter={intentFilter}
+          sortDir={sortDir}
+          setSortDir={setSortDir}
+          scoresFor={scoresFor}
+          wasmScoreFor={wasmScoreFor}
+          actionLabel="Disqualify"
+          onAction={disqualify}
+        />
+      )}
+
+      {!loading && !error && disqualifiedRows.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--danger)]">Disqualified</h2>
+            <p className="text-xs text-[var(--muted-foreground)]">
+              These entries are excluded from judging. Requalify to move them back above.
+            </p>
+          </div>
+          <SubmissionsTable
+            rows={disqualifiedRows}
+            password={password}
+            intentFilter={intentFilter}
+            sortDir={sortDir}
+            setSortDir={setSortDir}
+            scoresFor={scoresFor}
+            wasmScoreFor={wasmScoreFor}
+            actionLabel="Requalify"
+            onAction={requalify}
+          />
         </div>
       )}
+    </div>
+  );
+}
+
+function SubmissionsTable({
+  rows,
+  password,
+  intentFilter,
+  sortDir,
+  setSortDir,
+  scoresFor,
+  wasmScoreFor,
+  actionLabel,
+  onAction,
+}: {
+  rows: Row[];
+  password: string;
+  intentFilter: string;
+  sortDir: SortDir;
+  setSortDir: (fn: (prev: SortDir) => SortDir) => void;
+  scoresFor: (row: Row) => IntentScore[] | undefined;
+  wasmScoreFor: (row: Row) => WasmScore | null | undefined;
+  actionLabel: "Disqualify" | "Requalify";
+  onAction: (submissionId: string) => void;
+}) {
+  return (
+    <div className="overflow-x-auto border border-[var(--border)]">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-[var(--border)] bg-[var(--popover)] text-left text-xs uppercase tracking-widest text-[var(--muted-foreground)]">
+            <th className="px-3 py-2 font-medium">Track</th>
+            <th className="px-3 py-2 font-medium">Wallet</th>
+            <th className="px-3 py-2 font-medium">Item ID</th>
+            <th className="px-3 py-2 font-medium">Status</th>
+            <th className="px-3 py-2 font-medium">X Account</th>
+            <th className="px-3 py-2 font-medium">X Mentions</th>
+            <th className="px-3 py-2 font-medium">Intent</th>
+            <th className="px-3 py-2 font-medium">
+              <button
+                type="button"
+                onClick={() => setSortDir((prev) => (prev === "desc" ? "asc" : prev === "asc" ? null : "desc"))}
+                className="flex items-center gap-1 uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              >
+                Score {sortDir === "desc" ? "↓" : sortDir === "asc" ? "↑" : ""}
+              </button>
+            </th>
+            <th className="px-3 py-2 font-medium">Submitted</th>
+            <th className="px-3 py-2 font-medium">File</th>
+            <th className="px-3 py-2 font-medium">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={`${row.submissionId}-${row.itemId}`}
+              className="border-b border-[var(--border)] align-top last:border-b-0 hover:bg-[var(--card)]"
+            >
+              <td className="whitespace-nowrap px-3 py-2 text-xs uppercase tracking-widest text-[var(--muted-foreground)]">
+                {row.track}
+              </td>
+              <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
+                {row.walletAddress.slice(0, 6)}…{row.walletAddress.slice(-4)}
+              </td>
+              <td className="whitespace-nowrap px-3 py-2 font-mono">{row.itemId}</td>
+              <td className="whitespace-nowrap px-3 py-2">
+                <span className={row.verified ? "text-[var(--success)]" : "text-[var(--danger)]"}>
+                  {row.verified ? "✓ verified" : "✗ not verified"}
+                </span>
+              </td>
+              <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">@{row.twitterUsername}</td>
+              <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{row.tweetMentionCount ?? "—"}</td>
+              {row.track === "miner" && row.verified ? (
+                <IntentScoreCells scores={scoresFor(row)} onlyIntent={intentFilter === "all" ? undefined : intentFilter} />
+              ) : row.track === "wasm" && row.verified ? (
+                <WasmScoreCells wasmScore={wasmScoreFor(row)} />
+              ) : (
+                <>
+                  <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">—</td>
+                  <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">—</td>
+                </>
+              )}
+              <td className="whitespace-nowrap px-3 py-2 text-xs text-[var(--muted-foreground)]">
+                {new Date(row.createdAt).toLocaleString()}
+              </td>
+              <td className="whitespace-nowrap px-3 py-2">
+                <button
+                  className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  onClick={() =>
+                    apiClient.adminDownloadFile({
+                      submissionId: row.submissionId,
+                      itemIndex: row.itemIndex,
+                      password,
+                      fileName: row.originalFileName,
+                    })
+                  }
+                >
+                  Download
+                </button>
+              </td>
+              <td className="whitespace-nowrap px-3 py-2">
+                <button
+                  type="button"
+                  title={row.disqualifiedReason ?? undefined}
+                  onClick={() => onAction(row.submissionId)}
+                  className={`text-xs uppercase tracking-widest ${
+                    actionLabel === "Disqualify"
+                      ? "text-[var(--danger)] hover:opacity-80"
+                      : "text-[var(--success)] hover:opacity-80"
+                  }`}
+                >
+                  {actionLabel}
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

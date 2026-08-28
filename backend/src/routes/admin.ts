@@ -60,6 +60,47 @@ adminRouter.post("/wasm-scores", async (req, res, next) => {
   }
 });
 
+adminRouter.post("/submissions/:id/disqualify", async (req, res, next) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) {
+      res.status(400).json({ error: "Invalid submission id" });
+      return;
+    }
+    const { reason } = req.body as { reason?: string };
+    const result = await submissionsCollection().updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { disqualified: true, disqualifiedReason: reason?.trim() || null, updatedAt: new Date() } }
+    );
+    if (result.matchedCount === 0) {
+      res.status(404).json({ error: "Submission not found" });
+      return;
+    }
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post("/submissions/:id/requalify", async (req, res, next) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) {
+      res.status(400).json({ error: "Invalid submission id" });
+      return;
+    }
+    const result = await submissionsCollection().updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { disqualified: false, disqualifiedReason: null, updatedAt: new Date() } }
+    );
+    if (result.matchedCount === 0) {
+      res.status(404).json({ error: "Submission not found" });
+      return;
+    }
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
 adminRouter.get("/submissions", async (req, res, next) => {
   try {
     const track = req.query.track as Track | undefined;

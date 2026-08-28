@@ -166,6 +166,27 @@ export const apiClient = {
     return data.scores;
   },
 
+  async adminDisqualifySubmission(params: {
+    submissionId: string;
+    password: string;
+    reason?: string;
+  }): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/submissions/${params.submissionId}/disqualify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": params.password },
+      body: JSON.stringify({ reason: params.reason }),
+    });
+    if (!res.ok) throw new ApiError(await describeFailedResponse(res), res.status);
+  },
+
+  async adminRequalifySubmission(params: { submissionId: string; password: string }): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/submissions/${params.submissionId}/requalify`, {
+      method: "POST",
+      headers: { "x-admin-password": params.password },
+    });
+    if (!res.ok) throw new ApiError(await describeFailedResponse(res), res.status);
+  },
+
   async adminListSubmissions(params: { track?: Track; password: string }): Promise<Submission[]> {
     const query = params.track ? `?track=${params.track}` : "";
     const res = await fetch(`${API_BASE_URL}/api/admin/submissions${query}`, {
