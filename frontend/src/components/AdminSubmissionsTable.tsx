@@ -251,7 +251,7 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
 
       {!loading && !error && rows.length > 0 && (
         <div className="overflow-x-auto border border-[var(--border)]">
-          <table className="w-full table-fixed border-collapse text-sm">
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--popover)] text-left text-xs uppercase tracking-widest text-[var(--muted-foreground)]">
                 <th className="px-3 py-2 font-medium">Track</th>
