@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
 import path from "node:path";
 import multer from "multer";
 import { env } from "../env.js";
@@ -21,7 +22,9 @@ function sanitizeFileName(name: string): string {
 export function uploadFor(track: Track) {
   const storage = multer.diskStorage({
     destination: (_req, _file, cb) => {
-      cb(null, path.join(env.uploadDir, SUBDIR[track]));
+      const dir = path.join(env.uploadDir, SUBDIR[track]);
+      mkdirSync(dir, { recursive: true });
+      cb(null, dir);
     },
     filename: (_req, file, cb) => {
       cb(null, `${randomUUID()}-${sanitizeFileName(file.originalname)}`);
