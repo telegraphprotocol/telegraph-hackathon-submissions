@@ -51,7 +51,7 @@ export function MySubmissionsPage() {
 
   if (!isConnected || !address) {
     return (
-      <div className="mx-auto max-w-2xl px-6 py-10">
+      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
         <p className="text-sm text-[var(--muted-foreground)]">Connect your wallet to view your submissions.</p>
       </div>
     );
@@ -61,10 +61,10 @@ export function MySubmissionsPage() {
   const visibleSubmissions = submissions.filter((s) => s.status !== "rejected");
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10">
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10">
       <div>
         <h1 className="text-lg font-semibold">My Submissions</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">
+        <p className="break-all text-sm text-[var(--muted-foreground)]">
           Submissions made with the currently connected wallet ({address}).
         </p>
       </div>
@@ -110,7 +110,7 @@ export function MySubmissionsPage() {
             const isPast = deadlineIso ? Date.now() > new Date(deadlineIso).getTime() : false;
             return (
               <div key={submission._id} className="border border-[var(--border)] bg-[var(--card)] p-4">
-                <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-widest text-[var(--muted-foreground)]">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs uppercase tracking-widest text-[var(--muted-foreground)]">
                   <span className="flex items-center gap-2">
                     <span className="border border-[var(--border)] px-1.5 py-0.5">{submission.track}</span>
                     <span
@@ -130,8 +130,8 @@ export function MySubmissionsPage() {
                 <ul className="mb-3 flex flex-col gap-2">
                   {submission.items.map((item) => (
                     <li key={item.id} className="flex flex-col gap-1 border border-[var(--border)] px-3 py-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span>{item.id}</span>
+                      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                        <span className="break-all">{item.id}</span>
                         <span className={item.verified ? "text-[var(--success)]" : "text-[var(--danger)]"}>
                           {item.verified ? "✓ verified" : "✗ not verified"}
                         </span>
@@ -142,7 +142,7 @@ export function MySubmissionsPage() {
                     </li>
                   ))}
                 </ul>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     disabled={isPast}

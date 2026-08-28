@@ -22,8 +22,8 @@ export function SubmissionResult({ submission }: { submission: SubmissionRespons
       <ul className="flex flex-col gap-2">
         {submission.items.map((item) => (
           <li key={item.id} className="flex flex-col gap-1 border border-[var(--border)] bg-[var(--card)] px-3 py-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-mono">{item.id}</span>
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm">
+              <span className="font-mono break-all">{item.id}</span>
               <span className={item.verified ? "text-[var(--success)]" : "text-[var(--danger)]"}>
                 {item.verified ? "✓ verified" : "✗ not verified"}
               </span>

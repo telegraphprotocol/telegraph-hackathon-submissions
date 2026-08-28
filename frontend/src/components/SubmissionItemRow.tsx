@@ -24,20 +24,20 @@ export function SubmissionItemRow({
   fileError,
 }: Props) {
   return (
-    <div className="flex items-center gap-3 border border-[var(--border)] bg-[var(--card)] p-3">
+    <div className="flex flex-col gap-3 border border-[var(--border)] bg-[var(--card)] p-3 sm:flex-row sm:items-center">
       <input
         type="text"
         value={idValue}
         onChange={(e) => onIdChange(e.target.value)}
         placeholder={idLabel}
-        className={`flex-1 min-w-0 border bg-transparent px-3 py-2 text-sm outline-none transition-colors ${
+        className={`min-w-0 border bg-transparent px-3 py-2 text-sm outline-none transition-colors sm:flex-1 ${
           idError
             ? "border-[var(--danger)] shadow-[0_0_0_1px_var(--danger)]"
             : "border-[var(--input)] focus:border-[var(--ring)]"
         }`}
       />
       <label
-        className={`flex-1 min-w-0 cursor-pointer border border-dashed px-3 py-2 text-sm text-[var(--muted-foreground)] transition-colors ${
+        className={`min-w-0 cursor-pointer border border-dashed px-3 py-2 text-sm text-[var(--muted-foreground)] transition-colors sm:flex-1 ${
           fileError ? "border-[var(--danger)] shadow-[0_0_0_1px_var(--danger)]" : "border-[var(--input)]"
         }`}
       >

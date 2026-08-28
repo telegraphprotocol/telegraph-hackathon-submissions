@@ -154,7 +154,7 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">Submissions</h1>
           <p className="text-sm text-[var(--muted-foreground)]">
@@ -167,18 +167,18 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
             sessionStorage.removeItem(STORAGE_KEY);
             window.location.reload();
           }}
-          className="border border-[#ff4d4d] px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#ff4d4d] transition-colors hover:bg-[#ff4d4d] hover:text-black"
+          className="shrink-0 border border-[#ff4d4d] px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#ff4d4d] transition-colors hover:bg-[#ff4d4d] hover:text-black"
         >
           Log out
         </button>
       </div>
 
-      <div className="flex gap-2 border-b border-[var(--border)] pb-3">
+      <div className="flex gap-2 overflow-x-auto border-b border-[var(--border)] pb-3">
         {FILTERS.map((filter) => (
           <button
             key={filter.id}
             onClick={() => setTrack(filter.id)}
-            className={`border px-3 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors ${
+            className={`whitespace-nowrap border px-3 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors ${
               track === filter.id
                 ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
                 : "border-[var(--border)] text-[var(--muted-foreground)] hover:border-[var(--foreground)] hover:text-[var(--foreground)]"

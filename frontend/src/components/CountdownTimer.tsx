@@ -50,7 +50,7 @@ export function CountdownTimer({ deadlineIso, compact }: { deadlineIso: string; 
   }
 
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
       <span className="uppercase tracking-widest text-[var(--muted-foreground)]">
         {isPast ? "Submissions closed" : "Closes in"}
       </span>

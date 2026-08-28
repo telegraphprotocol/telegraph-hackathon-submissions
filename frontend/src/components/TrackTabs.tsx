@@ -8,14 +8,14 @@ const TABS: { id: TrackTab; label: string; disabled?: boolean }[] = [
 
 export function TrackTabs({ active, onChange }: { active: TrackTab; onChange: (tab: TrackTab) => void }) {
   return (
-    <div className="flex gap-2 border-b border-[var(--border)]">
+    <div className="flex gap-2 overflow-x-auto border-b border-[var(--border)]">
       {TABS.map((tab) => (
         <button
           key={tab.id}
           type="button"
           disabled={tab.disabled}
           onClick={() => onChange(tab.id)}
-          className={`px-4 py-2 text-xs font-medium uppercase tracking-widest transition-colors ${
+          className={`whitespace-nowrap px-3 py-2 text-xs font-medium uppercase tracking-widest transition-colors sm:px-4 ${
             active === tab.id
               ? "border-b-2 border-[var(--foreground)] text-[var(--foreground)]"
               : tab.disabled
