@@ -5,6 +5,7 @@ import { ObjectId } from "mongodb";
 import { consumeNonce, peekNonce } from "../lib/nonceStore.js";
 import { buildSubmissionMessage, verifySignature, type ChallengeAction } from "../lib/signature.js";
 import { verifyOwnership } from "../lib/validatorClient.js";
+import { fetchTweetMentionCount } from "../lib/mentionChecker.js";
 import { isPastDeadline } from "../lib/deadlines.js";
 import {
   deriveStatus,
@@ -22,15 +23,17 @@ interface ParsedBody {
   nonce: string;
   issuedAt: string;
   ids: string[];
+  twitterUsername: string;
 }
 
 function parseAndValidateBody(req: Request, res: Response): ParsedBody | null {
-  const { address, signature, nonce, issuedAt, itemIds } = req.body as {
+  const { address, signature, nonce, issuedAt, itemIds, twitterUsername } = req.body as {
     address?: string;
     signature?: string;
     nonce?: string;
     issuedAt?: string;
     itemIds?: string;
+    twitterUsername?: string;
   };
   const files = (req.files as Express.Multer.File[]) ?? [];
 
@@ -40,6 +43,11 @@ function parseAndValidateBody(req: Request, res: Response): ParsedBody | null {
   }
   if (!signature || !nonce || !issuedAt) {
     res.status(400).json({ error: "Missing signature, nonce, or issuedAt" });
+    return null;
+  }
+  const cleanedUsername = (twitterUsername ?? "").trim().replace(/^@/, "");
+  if (!cleanedUsername) {
+    res.status(400).json({ error: "Missing X (Twitter) username" });
     return null;
   }
 
@@ -59,7 +67,7 @@ function parseAndValidateBody(req: Request, res: Response): ParsedBody | null {
     return null;
   }
 
-  return { address, signature, nonce, issuedAt, ids };
+  return { address, signature, nonce, issuedAt, ids, twitterUsername: cleanedUsername };
 }
 
 async function verifyChallenge(params: {
@@ -137,7 +145,7 @@ export function createSubmitRouter(track: Track): Router {
         await deleteFiles(files.map((f) => f.path));
         return;
       }
-      const { address, signature, nonce, issuedAt, ids } = parsed;
+      const { address, signature, nonce, issuedAt, ids, twitterUsername } = parsed;
 
       const challengeError = await verifyChallenge({
         action: "submit",
@@ -193,6 +201,8 @@ export function createSubmitRouter(track: Track): Router {
         return;
       }
 
+      const tweetMentionCount = await fetchTweetMentionCount(twitterUsername);
+
       const now = new Date();
       const submission = {
         track,
@@ -201,6 +211,8 @@ export function createSubmitRouter(track: Track): Router {
         message,
         signature,
         status,
+        twitterUsername,
+        tweetMentionCount,
         createdAt: now,
         updatedAt: now,
       };
@@ -244,7 +256,7 @@ export function createSubmitRouter(track: Track): Router {
           await deleteFiles(files.map((f) => f.path));
           return;
         }
-        const { address, signature, nonce, issuedAt, ids } = parsed;
+        const { address, signature, nonce, issuedAt, ids, twitterUsername } = parsed;
 
         if (address.toLowerCase() !== existing.walletAddress) {
           await deleteFiles(files.map((f) => f.path));
@@ -319,6 +331,8 @@ export function createSubmitRouter(track: Track): Router {
           return;
         }
 
+        const tweetMentionCount = await fetchTweetMentionCount(twitterUsername);
+
         await submissionsCollection().updateOne(
           { _id: existing._id },
           {
@@ -327,6 +341,8 @@ export function createSubmitRouter(track: Track): Router {
               message,
               signature,
               status,
+              twitterUsername,
+              tweetMentionCount,
               updatedAt: new Date(),
             },
           }
@@ -334,7 +350,17 @@ export function createSubmitRouter(track: Track): Router {
 
         await deleteFiles(oldFilePaths);
 
-        res.json({ ...existing, items, message, signature, status, updatedAt: new Date(), saved: true });
+        res.json({
+          ...existing,
+          items,
+          message,
+          signature,
+          status,
+          twitterUsername,
+          tweetMentionCount,
+          updatedAt: new Date(),
+          saved: true,
+        });
       } catch (err) {
         await deleteFiles(files.map((f) => f.path));
         res.status(500).json({ error: err instanceof Error ? err.message : "Edit failed" });

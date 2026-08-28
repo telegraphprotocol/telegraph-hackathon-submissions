@@ -15,7 +15,11 @@ export function useSubmitFlow(track: Track, editingSubmissionId?: string) {
   const [result, setResult] = useState<SubmissionResponse | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
-  async function submit(address: string, entries: SubmissionEntry[]): Promise<SubmissionResponse | null> {
+  async function submit(
+    address: string,
+    entries: SubmissionEntry[],
+    twitterUsername: string
+  ): Promise<SubmissionResponse | null> {
     setError(null);
     setResult(null);
 
@@ -26,6 +30,10 @@ export function useSubmitFlow(track: Track, editingSubmissionId?: string) {
     }
     if (entries.some((e) => !e.file)) {
       setError("Every row needs a file.");
+      return null;
+    }
+    if (!twitterUsername.trim()) {
+      setError("X (Twitter) username is required.");
       return null;
     }
 
@@ -47,6 +55,7 @@ export function useSubmitFlow(track: Track, editingSubmissionId?: string) {
       formData.append("nonce", challenge.nonce);
       formData.append("issuedAt", challenge.issuedAt);
       formData.append("itemIds", JSON.stringify(ids));
+      formData.append("twitterUsername", twitterUsername.trim());
       for (const entry of entries) {
         formData.append("files", entry.file as File);
       }

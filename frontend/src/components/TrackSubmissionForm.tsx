@@ -16,6 +16,7 @@ interface Props {
   deadlineIso: string | null;
   editingSubmissionId?: string;
   initialItemIds?: string[];
+  initialTwitterUsername?: string;
   onDone?: () => void;
 }
 
@@ -28,6 +29,7 @@ export function TrackSubmissionForm({
   deadlineIso,
   editingSubmissionId,
   initialItemIds,
+  initialTwitterUsername,
   onDone,
 }: Props) {
   const { address, isConnected } = useAccount();
@@ -39,6 +41,8 @@ export function TrackSubmissionForm({
   const { submit, submitting, error, result, uploadProgress } = useSubmitFlow(track, editingSubmissionId);
   const [rowErrors, setRowErrors] = useState<Record<number, { id?: boolean; file?: boolean }>>({});
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [twitterUsername, setTwitterUsername] = useState(initialTwitterUsername ?? "");
+  const [twitterError, setTwitterError] = useState(false);
 
   const isPast = deadlineIso ? Date.now() > new Date(deadlineIso).getTime() : false;
   const isEditing = Boolean(editingSubmissionId);
@@ -86,6 +90,10 @@ export function TrackSubmissionForm({
       }
     });
 
+    const missingTwitter = !twitterUsername.trim();
+    setTwitterError(missingTwitter);
+    if (missingTwitter) missing.push("X (Twitter) username is required");
+
     setRowErrors(nextErrors);
     setValidationMessage(missing.length > 0 ? missing.join(" · ") : null);
     return missing.length === 0;
@@ -95,7 +103,7 @@ export function TrackSubmissionForm({
     e.preventDefault();
     if (!address) return;
     if (!validate()) return;
-    const submitted = await submit(address, entries);
+    const submitted = await submit(address, entries, twitterUsername);
     if (!submitted || !submitted.saved) return;
     if (isEditing) {
       onDone?.();
@@ -103,6 +111,7 @@ export function TrackSubmissionForm({
       setEntries([{ id: "", file: null }]);
       setRowErrors({});
       setValidationMessage(null);
+      setTwitterUsername("");
     }
   }
 
@@ -132,6 +141,24 @@ export function TrackSubmissionForm({
               change.
             </p>
           )}
+          <label className="flex flex-col gap-1">
+            <span className="text-xs uppercase tracking-widest text-[var(--muted-foreground)]">
+              X (Twitter) username
+            </span>
+            <input
+              type="text"
+              value={twitterUsername}
+              onChange={(e) => {
+                setTwitterUsername(e.target.value);
+                setTwitterError(false);
+              }}
+              placeholder="@yourhandle"
+              className={`border bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--ring)] ${
+                twitterError ? "border-[var(--danger)]" : "border-[var(--input)]"
+              }`}
+            />
+          </label>
+
           {entries.map((entry, index) => {
             const isOnlyRow = entries.length === 1;
             const isEmpty = !entry.id.trim() && !entry.file;

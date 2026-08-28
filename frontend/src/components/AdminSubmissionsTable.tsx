@@ -21,6 +21,8 @@ interface Row {
   itemIndex: number;
   verified: boolean;
   originalFileName: string;
+  twitterUsername: string;
+  tweetMentionCount: number | null;
 }
 
 type SortDir = "asc" | "desc" | null;
@@ -97,6 +99,8 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
       itemIndex: index,
       verified: item.verified,
       originalFileName: item.originalFileName,
+      twitterUsername: s.twitterUsername,
+      tweetMentionCount: s.tweetMentionCount,
     }))
   );
 
@@ -254,6 +258,8 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
                 <th className="px-3 py-2 font-medium">Wallet</th>
                 <th className="px-3 py-2 font-medium">Item ID</th>
                 <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">X Account</th>
+                <th className="px-3 py-2 font-medium">X Mentions</th>
                 <th className="px-3 py-2 font-medium">Intent</th>
                 <th className="px-3 py-2 font-medium">
                   <button
@@ -285,6 +291,10 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
                     <span className={row.verified ? "text-[var(--success)]" : "text-[var(--danger)]"}>
                       {row.verified ? "✓ verified" : "✗ not verified"}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">@{row.twitterUsername}</td>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
+                    {row.tweetMentionCount ?? "—"}
                   </td>
                   {row.track === "miner" && row.verified ? (
                     <IntentScoreCells scores={scoresFor(row)} onlyIntent={intentFilter === "all" ? undefined : intentFilter} />
@@ -362,7 +372,7 @@ function IntentScoreCells({
         <ul className="flex flex-col gap-0.5">
           {scores.map((s) => (
             <li key={s.intent} className="whitespace-nowrap font-mono text-xs text-[var(--foreground)]">
-              {(s.normalizedScore * 100).toFixed(1)}% (#{s.rank})
+              {s.normalizedScore.toFixed(2)} (#{s.rank})
             </li>
           ))}
         </ul>

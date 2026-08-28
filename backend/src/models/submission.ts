@@ -22,6 +22,8 @@ export interface Submission {
   message: string;
   signature: string;
   status: SubmissionStatus;
+  twitterUsername: string;
+  tweetMentionCount: number | null;
   createdAt: Date;
   updatedAt: Date;
 }

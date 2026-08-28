@@ -17,4 +17,5 @@ export const env = {
   adminPassword: required("ADMIN_PASSWORD", "changeme"),
   uploadDir: required("UPLOAD_DIR", "./uploads"),
   maxUploadMb: Number(process.env.MAX_UPLOAD_MB ?? 5),
+  mentionCheckerBaseUrl: required("MENTION_CHECKER_BASE_URL", "http://localhost:3100"),
 };

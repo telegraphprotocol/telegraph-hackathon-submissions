@@ -96,6 +96,7 @@ export function MySubmissionsPage() {
             deadlineIso={deadlines?.[editingSubmission.track] ?? null}
             editingSubmissionId={editingSubmission._id}
             initialItemIds={editingSubmission.items.map((i) => i.id)}
+            initialTwitterUsername={editingSubmission.twitterUsername}
             onDone={() => {
               setEditingId(null);
               reload();
