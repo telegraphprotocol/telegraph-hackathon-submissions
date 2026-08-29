@@ -225,7 +225,7 @@ export function createSubmitRouter(track: Track): Router {
       }
 
       const status = deriveStatus(items);
-      if (status === "rejected") {
+      if (status !== "verified") {
         await deleteFiles(files.map((f) => f.path));
         res.status(200).json({
           saved: false,
@@ -370,6 +370,19 @@ export function createSubmitRouter(track: Track): Router {
         if (status === "rejected") {
           await submissionsCollection().deleteOne({ _id: existing._id });
           await deleteFiles(oldFilePaths);
+          await deleteFiles(files.map((f) => f.path));
+          res.json({
+            saved: false,
+            track,
+            walletAddress: existing.walletAddress,
+            items: items.map((item) => ({ ...item, filePath: "", fileSizeBytes: 0 })),
+            status,
+          });
+          return;
+        }
+
+        if (status !== "verified") {
+          // Some but not all items verified — reject the edit without touching the existing (still-valid) submission.
           await deleteFiles(files.map((f) => f.path));
           res.json({
             saved: false,
