@@ -5,7 +5,6 @@ import { WalletConnectButton } from "./WalletConnectButton";
 const NAV = [
   { to: "/", label: "Submit" },
   { to: "/mine", label: "My Submissions" },
-  { to: "/admin", label: "Admin" },
 ];
 
 export function Header() {
