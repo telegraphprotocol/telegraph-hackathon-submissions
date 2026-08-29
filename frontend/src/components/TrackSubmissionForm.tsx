@@ -33,13 +33,14 @@ export function TrackSubmissionForm({
   onDone,
 }: Props) {
   const { address, isConnected } = useAccount();
+  const mode: "file" | "url" = track === "wasm" ? "url" : "file";
   const [entries, setEntries] = useState<SubmissionEntry[]>(
     initialItemIds && initialItemIds.length > 0
-      ? initialItemIds.map((id) => ({ id, file: null }))
-      : [{ id: "", file: null }]
+      ? initialItemIds.map((id) => ({ id, file: null, url: "" }))
+      : [{ id: "", file: null, url: "" }]
   );
   const { submit, submitting, error, result, uploadProgress } = useSubmitFlow(track, editingSubmissionId);
-  const [rowErrors, setRowErrors] = useState<Record<number, { id?: boolean; file?: boolean }>>({});
+  const [rowErrors, setRowErrors] = useState<Record<number, { id?: boolean; value?: boolean }>>({});
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [twitterUsername, setTwitterUsername] = useState(initialTwitterUsername ?? "");
   const [twitterError, setTwitterError] = useState(false);
@@ -53,39 +54,39 @@ export function TrackSubmissionForm({
       if (!prev[index]) return prev;
       const next = { ...prev };
       if (patch.id !== undefined) next[index] = { ...next[index], id: false };
-      if (patch.file !== undefined) next[index] = { ...next[index], file: false };
+      if (patch.file !== undefined || patch.url !== undefined) next[index] = { ...next[index], value: false };
       return next;
     });
   }
 
   function addEntry() {
-    setEntries((prev) => [...prev, { id: "", file: null }]);
+    setEntries((prev) => [...prev, { id: "", file: null, url: "" }]);
   }
 
   function removeEntry(index: number) {
     setEntries((prev) => {
       const next = prev.filter((_, i) => i !== index);
-      return next.length > 0 ? next : [{ id: "", file: null }];
+      return next.length > 0 ? next : [{ id: "", file: null, url: "" }];
     });
     setRowErrors({});
   }
 
   function clearEntry(index: number) {
-    updateEntry(index, { id: "", file: null });
+    updateEntry(index, { id: "", file: null, url: "" });
   }
 
   function validate(): boolean {
-    const nextErrors: Record<number, { id?: boolean; file?: boolean }> = {};
+    const nextErrors: Record<number, { id?: boolean; value?: boolean }> = {};
     const missing: string[] = [];
 
     entries.forEach((entry, index) => {
       const missingId = !entry.id.trim();
-      const missingFile = !entry.file;
-      if (missingId || missingFile) {
-        nextErrors[index] = { id: missingId, file: missingFile };
+      const missingValue = mode === "url" ? !entry.url.trim() : !entry.file;
+      if (missingId || missingValue) {
+        nextErrors[index] = { id: missingId, value: missingValue };
         const parts: string[] = [];
         if (missingId) parts.push(idLabel);
-        if (missingFile) parts.push("file");
+        if (missingValue) parts.push(mode === "url" ? "GitHub URL" : "file");
         missing.push(`Row ${index + 1}: missing ${parts.join(" and ")}`);
       }
     });
@@ -108,7 +109,7 @@ export function TrackSubmissionForm({
     if (isEditing) {
       onDone?.();
     } else {
-      setEntries([{ id: "", file: null }]);
+      setEntries([{ id: "", file: null, url: "" }]);
       setRowErrors({});
       setValidationMessage(null);
       setTwitterUsername("");
@@ -137,8 +138,9 @@ export function TrackSubmissionForm({
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {isEditing && (
             <p className="text-xs text-[var(--muted-foreground)]">
-              Editing re-uploads files for every item — please re-attach files even for entries you don't want to
-              change.
+              {mode === "url"
+                ? "Editing requires re-entering the GitHub URL for every item, even for entries you don't want to change."
+                : "Editing re-uploads files for every item — please re-attach files even for entries you don't want to change."}
             </p>
           )}
           <label className="flex flex-col gap-1">
@@ -161,20 +163,23 @@ export function TrackSubmissionForm({
 
           {entries.map((entry, index) => {
             const isOnlyRow = entries.length === 1;
-            const isEmpty = !entry.id.trim() && !entry.file;
+            const isEmpty = !entry.id.trim() && !entry.file && !entry.url.trim();
             return (
               <SubmissionItemRow
                 key={index}
                 idLabel={idLabel}
                 idValue={entry.id}
                 onIdChange={(value) => updateEntry(index, { id: value })}
+                mode={mode}
                 fileAccept={fileAccept}
                 file={entry.file}
                 onFileChange={(file) => updateEntry(index, { file })}
+                urlValue={entry.url}
+                onUrlChange={(url) => updateEntry(index, { url })}
                 onRemove={() => (isOnlyRow ? clearEntry(index) : removeEntry(index))}
                 canRemove={isOnlyRow ? !isEmpty : true}
                 idError={rowErrors[index]?.id}
-                fileError={rowErrors[index]?.file}
+                valueError={rowErrors[index]?.value}
               />
             );
           })}

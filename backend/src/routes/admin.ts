@@ -133,6 +133,10 @@ adminRouter.get("/submissions/:id/files/:itemIndex", async (req, res, next) => {
       res.status(404).json({ error: "Item not found" });
       return;
     }
+    if (!item.filePath) {
+      res.status(404).json({ error: "This item has no uploaded file (submitted as a GitHub URL)" });
+      return;
+    }
     res.download(item.filePath, item.originalFileName);
   } catch (err) {
     next(err);

@@ -28,7 +28,7 @@ export function SubmitPage() {
           idLabel="WASM registration ID"
           fileAccept=".wasm"
           title="Track 2 — WASM Submission"
-          description="Submit one or more WASM registration IDs, each with its .wasm file."
+          description="Submit one or more WASM registration IDs, each with a GitHub URL to its compiled module."
           deadlineIso={deadlines?.wasm ?? null}
         />
       )}

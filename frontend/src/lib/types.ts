@@ -9,6 +9,7 @@ export interface SubmissionItem {
   filePath: string;
   originalFileName: string;
   fileSizeBytes: number;
+  githubUrl: string | null;
 }
 
 export interface IntentScore {

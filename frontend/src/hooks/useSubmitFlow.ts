@@ -6,6 +6,7 @@ import type { SubmissionResponse, Track } from "../lib/types";
 export interface SubmissionEntry {
   id: string;
   file: File | null;
+  url: string;
 }
 
 export function useSubmitFlow(track: Track, editingSubmissionId?: string) {
@@ -28,7 +29,12 @@ export function useSubmitFlow(track: Track, editingSubmissionId?: string) {
       setError("Every row needs an ID.");
       return null;
     }
-    if (entries.some((e) => !e.file)) {
+    if (track === "wasm") {
+      if (entries.some((e) => !e.url.trim())) {
+        setError("Every row needs a GitHub URL.");
+        return null;
+      }
+    } else if (entries.some((e) => !e.file)) {
       setError("Every row needs a file.");
       return null;
     }
@@ -56,8 +62,12 @@ export function useSubmitFlow(track: Track, editingSubmissionId?: string) {
       formData.append("issuedAt", challenge.issuedAt);
       formData.append("itemIds", JSON.stringify(ids));
       formData.append("twitterUsername", twitterUsername.trim());
-      for (const entry of entries) {
-        formData.append("files", entry.file as File);
+      if (track === "wasm") {
+        formData.append("githubUrls", JSON.stringify(entries.map((e) => e.url.trim())));
+      } else {
+        for (const entry of entries) {
+          formData.append("files", entry.file as File);
+        }
       }
 
       setUploadProgress(0);

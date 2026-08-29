@@ -23,6 +23,7 @@ interface Row {
   itemIndex: number;
   verified: boolean;
   originalFileName: string;
+  githubUrl: string | null;
   twitterUsername: string;
   tweetMentionCount: number | null;
   disqualified: boolean;
@@ -128,6 +129,7 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
       itemIndex: index,
       verified: item.verified,
       originalFileName: item.originalFileName,
+      githubUrl: item.githubUrl,
       twitterUsername: s.twitterUsername,
       tweetMentionCount: s.tweetMentionCount,
       disqualified: s.disqualified,
@@ -462,12 +464,23 @@ function SubmissionsTable({
                 {new Date(row.createdAt).toLocaleString()}
               </td>
               <td className="whitespace-nowrap px-3 py-2">
-                <button
-                  className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                  onClick={() => onDownload(row)}
-                >
-                  Download
-                </button>
+                {row.githubUrl ? (
+                  <a
+                    href={row.githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  >
+                    View on GitHub
+                  </a>
+                ) : (
+                  <button
+                    className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                    onClick={() => onDownload(row)}
+                  >
+                    Download
+                  </button>
+                )}
               </td>
               <td className="whitespace-nowrap px-3 py-2">
                 <button

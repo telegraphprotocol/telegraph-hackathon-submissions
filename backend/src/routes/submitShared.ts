@@ -16,6 +16,7 @@ import {
 import { uploadFor } from "../middleware/upload.js";
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+const GITHUB_URL_RE = /^https?:\/\/(www\.)?github\.com\//i;
 
 interface ParsedBody {
   address: string;
@@ -24,16 +25,18 @@ interface ParsedBody {
   issuedAt: string;
   ids: string[];
   twitterUsername: string;
+  githubUrls: string[] | null;
 }
 
-function parseAndValidateBody(req: Request, res: Response): ParsedBody | null {
-  const { address, signature, nonce, issuedAt, itemIds, twitterUsername } = req.body as {
+function parseAndValidateBody(track: Track, req: Request, res: Response): ParsedBody | null {
+  const { address, signature, nonce, issuedAt, itemIds, twitterUsername, githubUrls } = req.body as {
     address?: string;
     signature?: string;
     nonce?: string;
     issuedAt?: string;
     itemIds?: string;
     twitterUsername?: string;
+    githubUrls?: string;
   };
   const files = (req.files as Express.Multer.File[]) ?? [];
 
@@ -62,12 +65,33 @@ function parseAndValidateBody(req: Request, res: Response): ParsedBody | null {
     res.status(400).json({ error: "itemIds must be a non-empty array of strings" });
     return null;
   }
+
+  if (track === "wasm") {
+    let urls: string[];
+    try {
+      urls = JSON.parse(githubUrls ?? "[]");
+    } catch {
+      res.status(400).json({ error: "githubUrls must be a JSON array" });
+      return null;
+    }
+    if (!Array.isArray(urls) || urls.length !== ids.length || urls.some((u) => typeof u !== "string")) {
+      res.status(400).json({ error: "Number of GitHub URLs must match number of itemIds" });
+      return null;
+    }
+    const cleanedUrls = urls.map((u) => u.trim());
+    if (cleanedUrls.some((u) => !GITHUB_URL_RE.test(u))) {
+      res.status(400).json({ error: "Each URL must be a github.com URL" });
+      return null;
+    }
+    return { address, signature, nonce, issuedAt, ids, twitterUsername: cleanedUsername, githubUrls: cleanedUrls };
+  }
+
   if (files.length !== ids.length) {
     res.status(400).json({ error: "Number of files must match number of itemIds" });
     return null;
   }
 
-  return { address, signature, nonce, issuedAt, ids, twitterUsername: cleanedUsername };
+  return { address, signature, nonce, issuedAt, ids, twitterUsername: cleanedUsername, githubUrls: null };
 }
 
 async function verifyChallenge(params: {
@@ -140,12 +164,12 @@ export function createSubmitRouter(track: Track): Router {
         return;
       }
 
-      const parsed = parseAndValidateBody(req, res);
+      const parsed = parseAndValidateBody(track, req, res);
       if (!parsed) {
         await deleteFiles(files.map((f) => f.path));
         return;
       }
-      const { address, signature, nonce, issuedAt, ids, twitterUsername } = parsed;
+      const { address, signature, nonce, issuedAt, ids, twitterUsername, githubUrls } = parsed;
 
       const challengeError = await verifyChallenge({
         action: "submit",
@@ -175,18 +199,30 @@ export function createSubmitRouter(track: Track): Router {
 
       const message = buildSubmissionMessage({ action: "submit", track, address, items: ids, nonce, issuedAt });
       const items: SubmissionItem[] = ids.map((id, index) => {
-        const file = files[index];
         const ownership = verifiedMap.get(id);
-        return {
+        const base = {
           id,
           verified: ownership?.verified ?? false,
           reason: ownership?.reason ?? "Ownership could not be determined",
           slug: ownership?.slug ?? null,
+        };
+        if (githubUrls) {
+          return { ...base, filePath: "", originalFileName: "", fileSizeBytes: 0, githubUrl: githubUrls[index] };
+        }
+        const file = files[index];
+        return {
+          ...base,
           filePath: file.path,
           originalFileName: file.originalname,
           fileSizeBytes: file.size,
+          githubUrl: null,
         };
       });
+
+      if (githubUrls && files.length > 0) {
+        // Defensive: this track submits URLs, not files — clean up any stray upload rather than leaving it orphaned.
+        await deleteFiles(files.map((f) => f.path));
+      }
 
       const status = deriveStatus(items);
       if (status === "rejected") {
@@ -253,12 +289,12 @@ export function createSubmitRouter(track: Track): Router {
           return;
         }
 
-        const parsed = parseAndValidateBody(req, res);
+        const parsed = parseAndValidateBody(track, req, res);
         if (!parsed) {
           await deleteFiles(files.map((f) => f.path));
           return;
         }
-        const { address, signature, nonce, issuedAt, ids, twitterUsername } = parsed;
+        const { address, signature, nonce, issuedAt, ids, twitterUsername, githubUrls } = parsed;
 
         if (address.toLowerCase() !== existing.walletAddress) {
           await deleteFiles(files.map((f) => f.path));
@@ -303,18 +339,30 @@ export function createSubmitRouter(track: Track): Router {
           submissionId: req.params.id,
         });
         const items: SubmissionItem[] = ids.map((id, index) => {
-          const file = files[index];
           const ownership = verifiedMap.get(id);
-          return {
+          const base = {
             id,
             verified: ownership?.verified ?? false,
             reason: ownership?.reason ?? "Ownership could not be determined",
             slug: ownership?.slug ?? null,
+          };
+          if (githubUrls) {
+            return { ...base, filePath: "", originalFileName: "", fileSizeBytes: 0, githubUrl: githubUrls[index] };
+          }
+          const file = files[index];
+          return {
+            ...base,
             filePath: file.path,
             originalFileName: file.originalname,
             fileSizeBytes: file.size,
+            githubUrl: null,
           };
         });
+
+        if (githubUrls && files.length > 0) {
+          // Defensive: this track submits URLs, not files — clean up any stray upload rather than leaving it orphaned.
+          await deleteFiles(files.map((f) => f.path));
+        }
 
         const oldFilePaths = existing.items.map((item) => item.filePath);
         const status = deriveStatus(items);
