@@ -154,19 +154,6 @@ export async function verifyOwnership(
       continue;
     }
 
-    if (track === "wasm") {
-      const activationStatus = (matchedRecord as { ActivationStatus?: string }).ActivationStatus;
-      if (activationStatus === "rejected") {
-        const rejectionReason = (matchedRecord as { RejectionReason?: string | null }).RejectionReason;
-        result.set(id, {
-          verified: false,
-          reason: rejectionReason ? `WASM registration was rejected: ${rejectionReason}` : "WASM registration was rejected",
-          slug,
-        });
-        continue;
-      }
-    }
-
     result.set(id, { verified: true, reason: null, slug });
   }
   return result;
