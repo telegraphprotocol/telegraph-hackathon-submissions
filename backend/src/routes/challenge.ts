@@ -23,7 +23,7 @@ challengeRouter.post("/challenge", async (req, res, next) => {
       res.status(400).json({ error: "Invalid or missing address" });
       return;
     }
-    if (track !== "miner" && track !== "wasm") {
+    if (track !== "miner" && track !== "wasm" && track !== "track3") {
       res.status(400).json({ error: "Invalid or missing track" });
       return;
     }

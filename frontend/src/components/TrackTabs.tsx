@@ -1,9 +1,9 @@
-export type TrackTab = "miner" | "wasm" | "coming-soon";
+export type TrackTab = "miner" | "wasm" | "track3";
 
 const TABS: { id: TrackTab; label: string; disabled?: boolean }[] = [
   { id: "miner", label: "Track 1 — Miner" },
   { id: "wasm", label: "Track 2 — WASM" },
-  { id: "coming-soon", label: "Track 3 — Coming Soon", disabled: true },
+  { id: "track3", label: "Track 3 — GitHub App" },
 ];
 
 export function TrackTabs({ active, onChange }: { active: TrackTab; onChange: (tab: TrackTab) => void }) {

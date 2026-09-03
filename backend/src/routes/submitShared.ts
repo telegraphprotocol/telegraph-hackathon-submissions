@@ -4,7 +4,7 @@ import { Router } from "express";
 import { ObjectId } from "mongodb";
 import { consumeNonce, peekNonce } from "../lib/nonceStore.js";
 import { buildSubmissionMessage, verifySignature, type ChallengeAction } from "../lib/signature.js";
-import { verifyOwnership } from "../lib/validatorClient.js";
+import { checkRegisteredBeforeDeadline, verifyOwnership } from "../lib/validatorClient.js";
 import { fetchTweetMentionCount } from "../lib/mentionChecker.js";
 import { isPastDeadline } from "../lib/deadlines.js";
 import {
@@ -195,7 +195,15 @@ export function createSubmitRouter(track: Track): Router {
         return;
       }
 
-      const verifiedMap = await verifyOwnership(address, track, ids);
+      const registrationResults = await checkRegisteredBeforeDeadline(track as "miner" | "wasm", ids);
+      const failedRegistration = registrationResults.find((r) => !r.ok);
+      if (failedRegistration) {
+        await deleteFiles(files.map((f) => f.path));
+        res.status(403).json({ error: failedRegistration.reason });
+        return;
+      }
+
+      const verifiedMap = await verifyOwnership(address, track as "miner" | "wasm", ids);
 
       const message = buildSubmissionMessage({ action: "submit", track, address, items: ids, nonce, issuedAt });
       const items: SubmissionItem[] = ids.map((id, index) => {
@@ -327,7 +335,15 @@ export function createSubmitRouter(track: Track): Router {
           return;
         }
 
-        const verifiedMap = await verifyOwnership(address, track, ids);
+        const registrationResults = await checkRegisteredBeforeDeadline(track as "miner" | "wasm", ids);
+        const failedRegistration = registrationResults.find((r) => !r.ok);
+        if (failedRegistration) {
+          await deleteFiles(files.map((f) => f.path));
+          res.status(403).json({ error: failedRegistration.reason });
+          return;
+        }
+
+        const verifiedMap = await verifyOwnership(address, track as "miner" | "wasm", ids);
 
         const message = buildSubmissionMessage({
           action: "edit",

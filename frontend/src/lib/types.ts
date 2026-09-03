@@ -1,4 +1,4 @@
-export type Track = "miner" | "wasm";
+export type Track = "miner" | "wasm" | "track3";
 export type SubmissionStatus = "verified" | "partial" | "rejected";
 
 export interface SubmissionItem {
@@ -41,6 +41,9 @@ export interface Submission {
   disqualifiedReason: string | null;
   createdAt: string;
   updatedAt: string;
+  title?: string;
+  description?: string;
+  liveAppUrl?: string;
 }
 
 /** Response from a submit/edit call. `saved` is false when every item failed
@@ -53,6 +56,9 @@ export type SubmissionResponse =
       walletAddress: string;
       items: SubmissionItem[];
       status: SubmissionStatus;
+      title?: string;
+      description?: string;
+      liveAppUrl?: string;
     };
 
 export interface ChallengeResponse {
@@ -61,4 +67,4 @@ export interface ChallengeResponse {
   issuedAt: string;
 }
 
-export type Deadlines = Record<"miner" | "wasm" | "track3", string>;
+export type Deadlines = Partial<Record<"miner" | "wasm" | "track3", string>>;

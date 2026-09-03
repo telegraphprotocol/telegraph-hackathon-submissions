@@ -14,7 +14,7 @@ mySubmissionsRouter.get("/submissions/mine/:address", async (req, res, next) => 
     }
     const track = req.query.track as Track | undefined;
     const filter: Record<string, unknown> = { walletAddress: address.toLowerCase() };
-    if (track === "miner" || track === "wasm") filter.track = track;
+    if (track === "miner" || track === "wasm" || track === "track3") filter.track = track;
 
     const submissions = await submissionsCollection()
       .find(filter)

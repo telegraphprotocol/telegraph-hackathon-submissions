@@ -1,7 +1,7 @@
 import type { ObjectId } from "mongodb";
 import { getDb } from "../db/mongo.js";
 
-export type Track = "miner" | "wasm";
+export type Track = "miner" | "wasm" | "track3";
 export type SubmissionStatus = "verified" | "partial" | "rejected";
 
 export interface SubmissionItem {
@@ -29,6 +29,9 @@ export interface Submission {
   disqualifiedReason: string | null;
   createdAt: Date;
   updatedAt: Date;
+  title?: string;
+  description?: string;
+  liveAppUrl?: string;
 }
 
 export function submissionsCollection() {

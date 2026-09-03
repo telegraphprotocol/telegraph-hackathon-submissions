@@ -4,9 +4,10 @@ import { apiClient, ApiError } from "../lib/apiClient";
 import { useDeadlines } from "../hooks/useDeadlines";
 import { useDeleteSubmission } from "../hooks/useDeleteSubmission";
 import { TrackSubmissionForm } from "../components/TrackSubmissionForm";
+import { Track3SubmissionForm } from "../components/Track3SubmissionForm";
 import type { Submission, Track } from "../lib/types";
 
-const TRACK_META: Record<Track, { idLabel: string; fileAccept: string; title: string; description: string }> = {
+const TRACK_META: Record<"miner" | "wasm", { idLabel: string; fileAccept: string; title: string; description: string }> = {
   miner: {
     idLabel: "Miner ID",
     fileAccept: ".yaml,.yml",
@@ -76,7 +77,7 @@ export function MySubmissionsPage() {
         <div className="tg-corner-tl tg-corner-tr relative flex flex-col items-center gap-1 border border-dashed border-[var(--border)] p-12 text-center">
           <p className="text-sm font-medium">No submissions yet</p>
           <p className="text-xs text-[var(--muted-foreground)]">
-            Go to the Submit page to enter Track 1 or Track 2.
+            Go to the Submit page to enter Track 1, Track 2, or Track 3.
           </p>
         </div>
       )}
@@ -90,18 +91,34 @@ export function MySubmissionsPage() {
           >
             ← Back to my submissions
           </button>
-          <TrackSubmissionForm
-            track={editingSubmission.track}
-            {...TRACK_META[editingSubmission.track]}
-            deadlineIso={deadlines?.[editingSubmission.track] ?? null}
-            editingSubmissionId={editingSubmission._id}
-            initialItemIds={editingSubmission.items.map((i) => i.id)}
-            initialTwitterUsername={editingSubmission.twitterUsername}
-            onDone={() => {
-              setEditingId(null);
-              reload();
-            }}
-          />
+          {editingSubmission.track === "track3" ? (
+            <Track3SubmissionForm
+              deadlineIso={deadlines?.track3 ?? null}
+              editingSubmissionId={editingSubmission._id}
+              initialTitle={editingSubmission.title}
+              initialDescription={editingSubmission.description}
+              initialGithubUrl={editingSubmission.items[0]?.githubUrl ?? ""}
+              initialLiveAppUrl={editingSubmission.liveAppUrl}
+              initialTwitterUsername={editingSubmission.twitterUsername}
+              onDone={() => {
+                setEditingId(null);
+                reload();
+              }}
+            />
+          ) : (
+            <TrackSubmissionForm
+              track={editingSubmission.track}
+              {...TRACK_META[editingSubmission.track]}
+              deadlineIso={deadlines?.[editingSubmission.track] ?? null}
+              editingSubmissionId={editingSubmission._id}
+              initialItemIds={editingSubmission.items.map((i) => i.id)}
+              initialTwitterUsername={editingSubmission.twitterUsername}
+              onDone={() => {
+                setEditingId(null);
+                reload();
+              }}
+            />
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -127,6 +144,22 @@ export function MySubmissionsPage() {
                   </span>
                   <span>Updated {new Date(submission.updatedAt).toLocaleString()}</span>
                 </div>
+                {submission.track === "track3" && (
+                  <div className="mb-3 flex flex-col gap-1 border border-[var(--border)] px-3 py-2 text-sm">
+                    <p className="font-semibold">{submission.title}</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">{submission.description}</p>
+                    {submission.liveAppUrl && (
+                      <a
+                        href={submission.liveAppUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-[#4da6ff] underline"
+                      >
+                        Live app
+                      </a>
+                    )}
+                  </div>
+                )}
                 <ul className="mb-3 flex flex-col gap-2">
                   {submission.items.map((item) => (
                     <li key={item.id} className="flex flex-col gap-1 border border-[var(--border)] px-3 py-2 text-sm">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TrackTabs, type TrackTab } from "../components/TrackTabs";
 import { TrackSubmissionForm } from "../components/TrackSubmissionForm";
-import { ComingSoonPanel } from "../components/ComingSoonPanel";
+import { Track3SubmissionForm } from "../components/Track3SubmissionForm";
 import { useDeadlines } from "../hooks/useDeadlines";
 
 export function SubmitPage() {
@@ -32,7 +32,7 @@ export function SubmitPage() {
           deadlineIso={deadlines?.wasm ?? null}
         />
       )}
-      {tab === "coming-soon" && <ComingSoonPanel deadlineIso={deadlines?.track3 ?? null} />}
+      {tab === "track3" && <Track3SubmissionForm deadlineIso={deadlines?.track3 ?? null} />}
     </div>
   );
 }

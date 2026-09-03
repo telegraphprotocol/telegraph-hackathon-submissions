@@ -1,11 +1,17 @@
 import type { Track } from "../models/submission.js";
 
-export const DEADLINES: Record<Track | "track3", string> = {
-  miner: "2026-09-02T11:59:59Z",
-  wasm: "2026-09-02T11:59:59Z",
+export const DEADLINES: Partial<Record<Track, string>> = {
   track3: "2026-09-07T23:59:59Z",
 };
 
 export function isPastDeadline(track: Track): boolean {
-  return Date.now() > new Date(DEADLINES[track]).getTime();
+  const deadline = DEADLINES[track];
+  if (!deadline) return false;
+  return Date.now() > new Date(deadline).getTime();
+}
+
+export const REGISTRATION_CUTOFF = "2026-08-31T23:59:59Z";
+
+export function isRegisteredBeforeCutoff(registeredAt: string): boolean {
+  return new Date(registeredAt).getTime() < new Date(REGISTRATION_CUTOFF).getTime();
 }

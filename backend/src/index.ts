@@ -8,6 +8,7 @@ import { healthRouter } from "./routes/health.js";
 import { challengeRouter } from "./routes/challenge.js";
 import { submitMinerRouter } from "./routes/submitMiner.js";
 import { submitWasmRouter } from "./routes/submitWasm.js";
+import { submitTrack3Router } from "./routes/submitTrack3.js";
 import { minerStatusRouter } from "./routes/minerStatus.js";
 import { adminRouter } from "./routes/admin.js";
 import { deadlinesRouter } from "./routes/deadlines.js";
@@ -25,6 +26,7 @@ async function main() {
   app.use("/api", challengeRouter);
   app.use("/api", submitMinerRouter);
   app.use("/api", submitWasmRouter);
+  app.use("/api", submitTrack3Router);
   app.use("/api", minerStatusRouter);
   app.use("/api/admin", adminRouter);
   app.use("/api", deadlinesRouter);

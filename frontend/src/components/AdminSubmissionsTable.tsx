@@ -11,6 +11,7 @@ const FILTERS: { id: Track | "all"; label: string }[] = [
   { id: "all", label: "All" },
   { id: "miner", label: "Track 1 — Miner" },
   { id: "wasm", label: "Track 2 — WASM" },
+  { id: "track3", label: "Track 3 — GitHub App" },
 ];
 
 interface Row {
@@ -28,6 +29,8 @@ interface Row {
   tweetMentionCount: number | null;
   disqualified: boolean;
   disqualifiedReason: string | null;
+  title?: string;
+  liveAppUrl?: string;
 }
 
 type SortDir = "asc" | "desc" | null;
@@ -134,6 +137,8 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
       tweetMentionCount: s.tweetMentionCount,
       disqualified: s.disqualified,
       disqualifiedReason: s.disqualifiedReason,
+      title: s.title,
+      liveAppUrl: s.liveAppUrl,
     }))
   );
 
@@ -442,7 +447,13 @@ function SubmissionsTable({
               <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
                 {row.walletAddress.slice(0, 6)}…{row.walletAddress.slice(-4)}
               </td>
-              <td className="whitespace-nowrap px-3 py-2 font-mono">{row.itemId}</td>
+              <td className="whitespace-nowrap px-3 py-2 font-mono">
+                {row.track === "track3" && row.title ? (
+                  <span title={row.itemId}>{row.title}</span>
+                ) : (
+                  row.itemId
+                )}
+              </td>
               <td className="whitespace-nowrap px-3 py-2">
                 <span className={row.verified ? "text-[var(--success)]" : "text-[var(--danger)]"}>
                   {row.verified ? "✓ verified" : "✗ not verified"}
@@ -464,23 +475,35 @@ function SubmissionsTable({
                 {new Date(row.createdAt).toLocaleString()}
               </td>
               <td className="whitespace-nowrap px-3 py-2">
-                {row.githubUrl ? (
-                  <a
-                    href={row.githubUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                  >
-                    View on GitHub
-                  </a>
-                ) : (
-                  <button
-                    className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                    onClick={() => onDownload(row)}
-                  >
-                    Download
-                  </button>
-                )}
+                <div className="flex flex-col gap-1">
+                  {row.githubUrl ? (
+                    <a
+                      href={row.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                    >
+                      View on GitHub
+                    </a>
+                  ) : (
+                    <button
+                      className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                      onClick={() => onDownload(row)}
+                    >
+                      Download
+                    </button>
+                  )}
+                  {row.track === "track3" && row.liveAppUrl && (
+                    <a
+                      href={row.liveAppUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                    >
+                      Live App
+                    </a>
+                  )}
+                </div>
               </td>
               <td className="whitespace-nowrap px-3 py-2">
                 <button

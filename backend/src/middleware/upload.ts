@@ -8,11 +8,13 @@ import type { Track } from "../models/submission.js";
 const ALLOWED_EXTENSIONS: Record<Track, string[]> = {
   miner: [".yaml", ".yml"],
   wasm: [".wasm"],
+  track3: [],
 };
 
 const SUBDIR: Record<Track, string> = {
   miner: "miner-yaml",
   wasm: "wasm",
+  track3: "track3",
 };
 
 function sanitizeFileName(name: string): string {

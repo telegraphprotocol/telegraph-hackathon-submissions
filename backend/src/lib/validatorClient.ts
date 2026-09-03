@@ -1,5 +1,6 @@
 import { env } from "../env.js";
 import { recordMatchesId, type AddressBundleResponse } from "../types/validator.js";
+import { REGISTRATION_CUTOFF, isRegisteredBeforeCutoff } from "./deadlines.js";
 
 export class ValidatorApiError extends Error {
   constructor(message: string, public status?: number) {
@@ -102,6 +103,54 @@ export function computeIntentScores(leaderboard: LeaderboardResponse, slug: stri
     results.push({ intent, score: mine.score, topScore: top.score, rank: mine.rank, normalizedScore });
   }
   return results;
+}
+
+export async function getRegisteredAt(track: "miner" | "wasm", id: string): Promise<string | null> {
+  const path = track === "miner" ? "miners" : "wasm";
+  const url = `${env.validatorBaseUrl}/api/${path}/${encodeURIComponent(id)}`;
+  const res = await fetch(url);
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new ValidatorApiError(`Validator ${track} registration lookup failed (${res.status})`, res.status);
+  }
+  const data = (await res.json()) as {
+    miner?: { registered_at?: string };
+    wasm?: { registered_at?: string };
+  };
+  const record = track === "miner" ? data.miner : data.wasm;
+  return record?.registered_at ?? null;
+}
+
+export interface RegistrationCheckResult {
+  id: string;
+  ok: boolean;
+  reason: string | null;
+}
+
+export async function checkRegisteredBeforeDeadline(
+  track: "miner" | "wasm",
+  ids: string[]
+): Promise<RegistrationCheckResult[]> {
+  return Promise.all(
+    ids.map(async (id): Promise<RegistrationCheckResult> => {
+      try {
+        const registeredAt = await getRegisteredAt(track, id);
+        if (!registeredAt) {
+          return { id, ok: false, reason: `No registration found for id "${id}"` };
+        }
+        if (!isRegisteredBeforeCutoff(registeredAt)) {
+          return {
+            id,
+            ok: false,
+            reason: `Item "${id}" was not registered on-chain before the deadline (${REGISTRATION_CUTOFF})`,
+          };
+        }
+        return { id, ok: true, reason: null };
+      } catch {
+        return { id, ok: false, reason: `Could not verify registration date for id "${id}"` };
+      }
+    })
+  );
 }
 
 export async function resolveMinerSlug(address: string, id: string): Promise<string | null> {
