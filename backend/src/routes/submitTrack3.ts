@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { Router } from "express";
+import multer from "multer";
 import { ObjectId } from "mongodb";
 import { consumeNonce, peekNonce } from "../lib/nonceStore.js";
 import { buildSubmissionMessage, verifySignature, type ChallengeAction } from "../lib/signature.js";
@@ -115,7 +116,9 @@ async function verifyChallenge(params: {
 
 export const submitTrack3Router = Router();
 
-submitTrack3Router.post("/submissions/track3", async (req: Request, res: Response) => {
+const parseFormFields = multer().none();
+
+submitTrack3Router.post("/submissions/track3", parseFormFields, async (req: Request, res: Response) => {
   try {
     if (isPastDeadline("track3")) {
       res.status(403).json({ error: "The submission deadline for this track has passed" });
@@ -189,7 +192,7 @@ submitTrack3Router.post("/submissions/track3", async (req: Request, res: Respons
   }
 });
 
-submitTrack3Router.put("/submissions/track3/:id", async (req: Request, res: Response) => {
+submitTrack3Router.put("/submissions/track3/:id", parseFormFields, async (req: Request, res: Response) => {
   try {
     if (isPastDeadline("track3")) {
       res.status(403).json({ error: "The submission deadline for this track has passed" });
