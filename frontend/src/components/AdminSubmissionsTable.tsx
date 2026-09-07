@@ -30,6 +30,7 @@ interface Row {
   disqualified: boolean;
   disqualifiedReason: string | null;
   title?: string;
+  description?: string;
   liveAppUrl?: string;
 }
 
@@ -138,6 +139,7 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
       disqualified: s.disqualified,
       disqualifiedReason: s.disqualifiedReason,
       title: s.title,
+      description: s.description,
       liveAppUrl: s.liveAppUrl,
     }))
   );
@@ -447,11 +449,20 @@ function SubmissionsTable({
               <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
                 {row.walletAddress.slice(0, 6)}…{row.walletAddress.slice(-4)}
               </td>
-              <td className="whitespace-nowrap px-3 py-2 font-mono">
+              <td className="px-3 py-2 font-mono">
                 {row.track === "track3" && row.title ? (
-                  <span title={row.itemId}>{row.title}</span>
+                  <div className="flex min-w-[200px] flex-col gap-0.5">
+                    <span className="whitespace-nowrap" title={row.itemId}>
+                      {row.title}
+                    </span>
+                    {row.description && (
+                      <span className="whitespace-normal font-sans text-xs normal-case text-[var(--muted-foreground)]">
+                        {row.description}
+                      </span>
+                    )}
+                  </div>
                 ) : (
-                  row.itemId
+                  <span className="whitespace-nowrap">{row.itemId}</span>
                 )}
               </td>
               <td className="whitespace-nowrap px-3 py-2">
