@@ -35,9 +35,16 @@ DEFAULT_LIMIT = 100
 app = Flask(__name__)
 api = API()
 
+# A single persistent event loop, reused for every call. twscrape caches an
+# asyncio.Lock() the first time it runs, bound to whatever loop was current
+# then — creating a new loop per request breaks that lock on every request
+# after the first with "bound to a different event loop".
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+
 
 def run_async(coro):
-    return asyncio.new_event_loop().run_until_complete(coro)
+    return loop.run_until_complete(coro)
 
 
 async def ensure_account() -> None:
