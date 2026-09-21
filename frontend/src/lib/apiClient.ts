@@ -197,6 +197,15 @@ export const apiClient = {
     return data.submissions;
   },
 
+  async adminGetMentionCount(params: { username: string; password: string }): Promise<number | null> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/mentions/${encodeURIComponent(params.username)}`, {
+      headers: { "x-admin-password": params.password },
+    });
+    if (!res.ok) throw new ApiError(await describeFailedResponse(res), res.status);
+    const data = await res.json();
+    return data.tweetMentionCount;
+  },
+
   async adminDownloadFile(params: {
     submissionId: string;
     itemIndex: number;
