@@ -4,6 +4,7 @@ import { adminAuth } from "../middleware/adminAuth.js";
 import { submissionsCollection, type Track } from "../models/submission.js";
 import { computeIntentScores, getAddressBundle, getLeaderboard, getWasmScore } from "../lib/validatorClient.js";
 import { recordMatchesId } from "../types/validator.js";
+import { fetchTweetMentionCount } from "../lib/mentionChecker.js";
 
 export const adminRouter = Router();
 
@@ -111,6 +112,15 @@ adminRouter.get("/submissions", async (req, res, next) => {
       .sort({ createdAt: -1 })
       .toArray();
     res.json({ submissions });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.get("/mentions/:username", async (req, res, next) => {
+  try {
+    const count = await fetchTweetMentionCount(req.params.username);
+    res.json({ tweetMentionCount: count });
   } catch (err) {
     next(err);
   }

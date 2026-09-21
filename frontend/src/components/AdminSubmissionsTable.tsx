@@ -27,6 +27,7 @@ interface Row {
   githubUrl: string | null;
   twitterUsername: string;
   tweetMentionCount: number | null;
+  mentionCountLoading: boolean;
   disqualified: boolean;
   disqualifiedReason: string | null;
   title?: string;
@@ -45,6 +46,7 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [minerScores, setMinerScores] = useState<Record<string, IntentScore[]>>({});
   const [wasmScores, setWasmScores] = useState<Record<string, WasmScore | null>>({});
+  const [mentionCounts, setMentionCounts] = useState<Record<string, number | null>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [disqualifyTarget, setDisqualifyTarget] = useState<string | null>(null);
@@ -122,6 +124,34 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
     };
   }, [submissions, password]);
 
+  useEffect(() => {
+    const usernames = [...new Set(submissions.map((s) => s.twitterUsername).filter(Boolean))];
+    if (usernames.length === 0) {
+      setMentionCounts({});
+      return;
+    }
+    let cancelled = false;
+    setMentionCounts((prev) => {
+      const next = { ...prev };
+      for (const username of usernames) delete next[username];
+      return next;
+    });
+    for (const username of usernames) {
+      apiClient
+        .adminGetMentionCount({ username, password })
+        .then((count) => {
+          if (cancelled) return;
+          setMentionCounts((prev) => ({ ...prev, [username]: count }));
+        })
+        .catch(() => {
+          // Non-critical — leave this username's count unresolved if it fails.
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [submissions, password]);
+
   const allRows: Row[] = submissions.flatMap((s) =>
     s.items.map((item, index) => ({
       submissionId: s._id,
@@ -135,7 +165,8 @@ export function AdminSubmissionsTable({ password }: { password: string }) {
       originalFileName: item.originalFileName,
       githubUrl: item.githubUrl,
       twitterUsername: s.twitterUsername,
-      tweetMentionCount: s.tweetMentionCount,
+      tweetMentionCount: s.twitterUsername in mentionCounts ? mentionCounts[s.twitterUsername] : s.tweetMentionCount,
+      mentionCountLoading: !(s.twitterUsername in mentionCounts) && s.tweetMentionCount === null,
       disqualified: s.disqualified,
       disqualifiedReason: s.disqualifiedReason,
       title: s.title,
@@ -447,7 +478,7 @@ function SubmissionsTable({
                 {row.track}
               </td>
               <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
-                {row.walletAddress.slice(0, 6)}…{row.walletAddress.slice(-4)}
+                <CopyAddress address={row.walletAddress} />
               </td>
               <td className="px-3 py-2 font-mono">
                 {row.track === "track3" && row.title ? (
@@ -471,7 +502,9 @@ function SubmissionsTable({
                 </span>
               </td>
               <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">@{row.twitterUsername}</td>
-              <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{row.tweetMentionCount ?? "—"}</td>
+              <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
+                {row.mentionCountLoading ? "Loading…" : (row.tweetMentionCount ?? "—")}
+              </td>
               {row.track === "miner" && row.verified ? (
                 <IntentScoreCells scores={scoresFor(row)} onlyIntent={intentFilter === "all" ? undefined : intentFilter} />
               ) : row.track === "wasm" && row.verified ? (
@@ -535,6 +568,31 @@ function SubmissionsTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function CopyAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard unavailable — the title attribute still shows the full address.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      title={address}
+      className="font-mono text-xs text-[var(--foreground)] hover:text-[var(--muted-foreground)]"
+    >
+      {copied ? "Copied!" : `${address.slice(0, 6)}…${address.slice(-4)}`}
+    </button>
   );
 }
 
